@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="content-type" content="text/html;charset=utf8"/>
+    <link rel="stylesheet" type="text/css" href="w2ui-1.5.rc1.min.css" />
+    <link rel="stylesheet" type="text/css" href="/websdk/font-awesome/css/font-awesome.min.css" />
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+    <script type="text/javascript" src="w2ui-1.5.rc1.min.js"></script>
+    <script type="text/javascript" src="/websdk/sdk.js"></script>
+    <style>
+    .test{
+        padding: 10px;
+    }
+    .test input{
+        width:500px;
+        height:30px;
+        font-size:14px;
+    }
+    </style>
+</head>
+<body style="margin:0;padding:0" >
+<div id="loginform" class="w2ui-form" style="height:200px">
+    <div class="w2ui-page page-0" style="margin-top:20px">
+        <div class="w2ui-field w2ui-span8" style="clear: both">
+            <label>Username:</label>
+            <div>
+                <input type="text" name="username" id="username" placeholder="playground" />
+            </div>
+        </div>
+        <div class="w2ui-field w2ui-span8" style="clear: both">
+            <label>password:</label>
+            <div>
+                <input id="password" name="password" placeholder="1234" type="password"/>
+            </div>
+        </div>
+    </div>
+    <div class="w2ui-buttons" style="height:50px">
+        <button class="w2ui-btn" name="login">Login</button>
+        <button class="w2ui-btn" name="access_wo_login">Unauthorized Access Testing</button>
+    </div>
+</div>
+<div class="test">
+    <h2>Settings</h2>
+    <p>Host:</p>
+    <input id="settings_host" value="">
+</div>
+<div class="test">
+    <h2>Test 1:</h2>
+    <p> Access with Web API:</p>
+    <input id="test1_cmd" value="/run/bstor.nodes.uptime.state">
+    <button id="test1_btn" class="w2ui-btn">Go</button>
+</div>
+
+<script type="text/javascript">
+$(function(){
+    /*
+     * For new ObjshSDK(), default options is 
+     * {auto_relogin_connect:true, auto_reconnect:true}
+     */
+    var sdk = new ObjshSDK({auto_relogin_connect:true, auto_reconnect:true})
+    sdk.ready().then(
+        function(){
+            console.log('resolved: sdk.is_authenticated',sdk.is_authenticated)
+            if (sdk.is_authenticated){
+                // this is called 
+                // when {auto_relogin_connect:true, auto_reconnect:false}
+                // and login success
+                $('#loginform').hide()
+            }
+            else{
+                // this is called when {auto_relogin_connect:false}
+                $('#loginform').show()
+            }
+        },
+        function(){
+            // this is called 
+            // when {auto_relogin_connect:true}
+            // but login failure
+            console.log('rejected: sdk.is_authenticated',sdk.is_authenticated)
+            $('#loginform').show()
+        },        
+        function(state){
+            // this is called 
+            // when {auto_relogin_connect:true, auto_reconnect:true}
+            // and login success
+            $('#loginform').hide()
+            console.log('state',state)
+        },
+    )
+    $('#settings_host').val(window.location.protocol+'//'+window.location.host)
+    $('#test1_btn').click(function(){
+        var url = $('#settings_host').val()+$('#test1_cmd').val()
+        open(url)
+    })
+})
+</script>
+</body>
+</html>

@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="content-type" content="text/html;charset=utf8"/>
+    <link rel="stylesheet" type="text/css" href="w2ui-1.5.rc1.min.css" />
+    <link rel="stylesheet" type="text/css" href="/websdk/font-awesome/css/font-awesome.min.css" />
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+    <script type="text/javascript" src="w2ui-1.5.rc1.min.js"></script>
+    <script type="text/javascript" src="/websdk/sdk.js"></script>
+    <style>
+    .leaf-name{
+        font-size:1.1em;
+        font-weight:bold;
+    }
+    .leaf-name.Event{
+        color:#aaaaff;
+    }
+    .leaf-name.Exception{
+        color:red;
+    }
+    .event-row{
+        color:blue;
+    }
+    </style>
+</head>
+<body style="margin:0;padding:0;font-size:14px" >
+<div id="layout"  style="padding:0px;width:100%;height:300"></layout>
+<!--
+<div id="content">
+    
+</div>
+-->
+<script>
+var sdk = new ObjshSDK()
+var app = {
+    init : function(){
+        
+        $('#layout').height($(document).height())
+        $('#layout').w2layout({
+            name: 'layout',
+            panels: [
+                { type: 'main', size: '65%', style:'', content:'<div id="grid" style="width: 100%; height: 100%; overflow: hidden;"></div>' },
+                { type: 'right', size: '35%', hidden:true, resizable: true, style: 'padding:10px;', content:'',title:'<a onclick="w2ui[\'layout\'].hide(\'right\')" style="float:right;right:20px;font-size:12px"><span class="fa fa-angle-double-right"></span> Hide</a>' },
+            ]
+        });        
+        sdk.login().then(function(){
+            app.render_events_table()
+        })
+    },
+    restore_argspec:function(argspec){
+        args = argspec[0]
+        if (args.length && args[0]=='self') args.splice(0,1)
+        if (argspec[3] && argspec[3].length){
+            var start_idx = args.length - argspec[3].length
+            argspec[3].forEach(function(v,idx){
+                args[start_idx+idx] += ('=' + ((typeof(v)==typeof(1) || typeof(v)==typeof(1.0)) ? v : (v===null ? 'None' : (typeof(v)=='boolean' ? (''+v).replace(/\b\w/g, l => l.toUpperCase()) : '"'+v+'"'))))
+            })
+        }
+        if (argspec[1]) args.push('*'+argspec[1])
+        if (argspec[2]) args.push('**'+argspec[2])
+        return (args.length ? '('+args.join(', ')+')' : '')
+    },
+    render_events_table:function(){
+        var self = this
+        sdk.get_command_line('root.playground.get_event_exception_list').done(function(response){
+            if (response.retcode != 0) return console.warn(response.stderr)
+            var records = []
+            var node_names = Object.keys(response.stdout)
+            var no = 0
+            node_names.sort()
+            var rows = []
+            node_names.forEach(function(node_name,idx){
+                var node_meta = response.stdout[node_name]
+                
+                //don't show node, just leaf
+                if (node_meta.classname=='StateNode') return
+
+                var record = {recid:no,name:node_name,type:node_meta.classname,description:node_meta.doc,w2ui:{children:[]}}
+                no += 1
+                rows.push(record)
+                var exports = node_meta.exports
+                var exports_keys = Object.keys(exports)
+                records.push(record)
+                exports_keys.sort()
+                exports_keys.forEach(function(key){
+                    var row = {recid:no,name:key,type:'Callable',description:exports[key].doc,node_name:node_name}
+                    var argspec = exports[key].argspec
+                    if (argspec){
+                        row.name += self.restore_argspec(argspec)
+                    }
+                    
+                    no += 1
+                    record.w2ui.children.push(row)
+                    rows.push(row)
+                })
+
+                var resources = node_meta.resources
+                var resources_keys = Object.keys(resources)
+                resources_keys.sort()
+                resources_keys.forEach(function(key){
+                    var row = {recid:no,name:key,type:'Resouce',description:resources[key].doc,node_name:node_name,w2ui:{style:'color:#119911'}}
+                    no += 1
+                    record.w2ui.children.push(row)
+                    rows.push(row)
+                })
+                
+                var events = node_meta.events
+                var events_keys = Object.keys(events)
+                events_keys.sort()
+                events_keys.forEach(function(key){
+                    var row = {recid:no,name:key,type:'Event',description:events[key],node_name:node_name,w2ui:{style:'color:#111199'}}
+                    no += 1
+                    record.w2ui.children.push(row)
+                    rows.push(row)
+                })
+                var exceptions = node_meta.exceptions
+                var exceptions_keys = Object.keys(exceptions)
+                exceptions_keys.sort()
+                exceptions_keys.forEach(function(key){
+                    var row = {recid:no,name:key,type:'Exception',description:exceptions[key],node_name:node_name,w2ui:{style:'color:red'}}
+                    no += 1
+                    record.w2ui.children.push(row)
+                    rows.push(row)
+                    
+                })
+                //record.name = 'cal:'+exports_keys.length+'; err:'+exceptions_keys.length+'; evt:'+events_keys.length
+            })
+            
+            $('#grid').w2grid({ 
+                name: 'grid', 
+                header: 'List of Leaf Nodes',
+                
+                //url: 'data/list.json',
+                //method: 'GET', // need this to avoid 412 error on Safari
+                sortData: [ { field: 'node_name', direction: 'asc' } ],
+                toolbar: {
+                    name:'grid_toolbar',
+                    id:'grid_toolbar',
+                    items:[
+                        { type: 'button', id: 'downloadcmd', icon: 'fa fa-chevron-circle-down', text: 'Download', disabled:false,
+                            tooltip: function (item) {
+                                return 'Download as a CSV file';
+                            },
+                            onClick: function (event) {
+                                var file_rows = []
+                                rows.forEach(function(record){
+                                    var row = [''+record.recid,record.node_name,record.name,record.type,record.description ? record.description.replace(new RegExp('\n', 'g'),'\\n') : ''].join('\t')
+                                    file_rows.push(row)
+                                })
+                                downloadLocalFile(ObjshSDK.metadata.runner_name + '-leafnodes.txt',file_rows.join('\n'))
+                            }
+                        },
+                    ]},
+                show: {
+                    header         : true,
+                    toolbar     : true,
+                    footer        : true,
+                    lineNumbers    : true,
+                    selectColumn: false,
+                    expandColumn: false
+                },        
+                columns: [                
+                    /*{ field: 'recid', caption: 'No', size: '10%' },*/
+                    { field: 'name', caption: 'Name', size:'200px' },
+                    { field: 'type', caption: 'Type', size: '150px' },
+                    { field: 'description', caption: 'Description',size:'100%'}
+                ],
+                records:records,
+                /*
+                searches: [
+                    { type: 'int',  field: 'recid', caption: 'ID' },
+                    { type: 'text', field: 'fname', caption: 'First Name' },
+                    { type: 'text', field: 'lname', caption: 'Last Name' },
+                    { type: 'date', field: 'sdate', caption: 'Start Date' }
+                ],
+                onExpand: function (event) {
+                    $('#'+event.box_id).html('<div style="padding: 10px; height: 100px">Expanded content</div>');
+                }
+                */
+            });
+            
+            w2ui['grid'].on('click',function(event){
+                var row = rows[event.recid]
+                var node_meta = response.stdout[row.node_name]
+                var contents = []
+                var classname = row.type
+                contents.push('<div class="leaf-name '+classname+'">['+row.type+'] '+row.name+'</div>')
+                contents.push('<pre>'+row.description+'</pre>')
+                w2ui['layout'].content('right',contents.join(''))
+                w2ui['layout'].show('right')
+            })
+        })
+    }
+}
+/*
+ * Utility functions
+ */
+function downloadLocalFile(filename,content){
+    var requestFileSystem = window.requestFileSystem || window.webkitRequestFileSystem;
+    if (!requestFileSystem){
+        Service.myAlert('Not Supported','Downloading in your browser is not supported.')
+        return;
+    }
+    var fsErrorHandler = function(e) {
+      var msg = '';
+      //console.log(e)
+      switch (e.name) {
+        case FileError.QUOTA_EXCEEDED_ERR:
+          msg = 'QUOTA_EXCEEDED_ERR';
+          break;
+        case FileError.NOT_FOUND_ERR:
+          msg = 'NOT_FOUND_ERR';
+          break;
+        case FileError.SECURITY_ERR:
+          msg = 'SECURITY_ERR';
+          break;
+        case FileError.INVALID_MODIFICATION_ERR:
+          msg = 'INVALID_MODIFICATION_ERR';
+          break;
+        case FileError.INVALID_STATE_ERR:
+          msg = 'INVALID_STATE_ERR';
+          break;
+        default:
+          msg = 'Error:'+e.name+';'+e.message;
+          break;
+      };
+      //console.log('Error: ' + msg);
+    }
+    requestFileSystem(window.TEMPORARY, 1024*1024, function(fs) {
+        fs.root.getFile(filename, {create: true}, function(fileEntry) {
+            fileEntry.createWriter(function(fileWriter) {
+                var blob = new Blob([content]);
+                fileWriter.onwriteend = function() {
+                    var a = document.createElement('a')
+                    a.href = fileEntry.toURL()
+                    a.setAttribute('download',filename)
+                    a.setAttribute('target','_blank')
+                    a.click()
+                };
+                fileWriter.write(blob);
+            }, fsErrorHandler);
+        }, fsErrorHandler);
+    }, fsErrorHandler);
+}
+
+$(function(){
+    app.init() 
+})
+</script>
+</body>
+</html>

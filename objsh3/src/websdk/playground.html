@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8"/>    
+    <link rel="stylesheet" type="text/css" href="w2ui-1.5.rc1.min.css" />
+    <link rel="stylesheet" type="text/css" href="font-awesome/css/font-awesome.min.css" />
+    <script src="jquery.3.3.1.min.js"></script>
+    <script type="text/javascript" src="w2ui-1.5.rc1.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="playground.css"/>
+    <script type="text/javascript" src="sdk.js"></script>
+    <script type="text/javascript" src="playground.js"></script>
+   
+</head>
+<body style="margin:0;padding:0" >
+    <div style="padding:0px">
+        <div class="header"><span class="server_name"></span> <span class="fa fa-chevron-right">&nbsp;</span> API Development Playground <span style="float:right;margin-right:5px;font-size:16px">&nbsp;Welcome &nbsp;<span style="float:right;margin-right:10px" id="login-username"></span></span> </div>
+        <div id="loginform" class="w2ui-form" style="height:200px">
+            <div class="w2ui-page page-0" style="margin-top:20px">
+                <div class="w2ui-field w2ui-span8" style="clear: both">
+                    <label>Username:</label>
+                    <div>
+                        <input type="text" name="username" id="username" placeholder="playground" />
+                    </div>
+                </div>
+            
+                <div class="w2ui-field w2ui-span8" style="clear: both">
+                    <label>password:</label>
+                    <div>
+                        <input id="password" name="password" placeholder="1234" type="password"/>
+                    </div>
+                </div>
+
+                <div class="w2ui-field w2ui-span8" style="clear: both;text-align:center;color:red">
+                    <span id="login-message"></span>
+                </div>
+            </div>
+            <div class="w2ui-buttons" style="height:50px">
+                <button class="w2ui-btn" name="login">Login</button>
+            </div>
+        </div>
+        
+        <div id="connected_content" style="visibility:hidden">
+            <div id="toolbar" style=""></div>
+            <div id="layout" style="height:1px"></div>
+        </div>
+        <!--
+        <div id="result"></div>
+        -->
+    </div>
+    <div id="exports" style="display:none"></div>
+</body>
+</html>

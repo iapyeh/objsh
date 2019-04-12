@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="content-type" content="text/html;charset=utf8"/>
+    <link rel="stylesheet" type="text/css" href="w2ui-1.5.rc1.min.css" />
+    <link rel="stylesheet" type="text/css" href="/websdk/font-awesome/css/font-awesome.min.css" />
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+    <script type="text/javascript" src="w2ui-1.5.rc1.min.js"></script>
+    <script type="text/javascript" src="/websdk/sdk.js"></script>
+    <style>
+
+    </style>
+</head>
+<body style="margin:0;padding:0" >
+<div style=";text-align:center;text-align:-webkit-center">
+    <div id="loginform" class="w2ui-form" style="height:300px;width:500px">
+        <div class="w2ui-page page-0" style="margin-top:20px">
+            <div class="w2ui-field w2ui-span8" style="clear: both">
+                <label>Host:</label>
+                <div>
+                    <input type="text" name="host" value="" />
+                </div>
+            </div>
+            <div class="w2ui-field w2ui-span8" style="clear: both">
+                <label>Port</label>
+                <div>
+                    <input type="text" name="port" value="" />
+                </div>
+            </div>
+            <div class="w2ui-field w2ui-span8" style="clear: both">
+                <label>Websocket port</label>
+                <div>
+                    <input type="text" name="ws_port" value="" />
+                </div>
+            </div>
+            <div class="w2ui-field w2ui-span8" style="clear: both">
+                <label>Username:</label>
+                <div>
+                    <input type="text" name="username" value="playground" />
+                </div>
+            </div>
+            <div class="w2ui-field w2ui-span8" style="clear: both">
+                <label>password:</label>
+                <div>
+                    <input type="password" name="password" value="1234"/>
+                </div>
+            </div>
+        </div>
+        <div class="w2ui-buttons">
+            <button class="w2ui-btn" name="login" id="login-btn">Login</button>
+            <button class="w2ui-btn" name="logout" id="logout-btn">Logout</button>
+        </div>
+    </div>
+    <div><h1>Connection state:<span class="connection-state"></span></h1></div>
+</div>
+<script type="text/javascript">
+$(function(){
+    var sdk = new ObjshSDK()
+    window.login = function(username,password){
+        if (0){
+            /* sample code for simple login */
+            sdk.login(username,password).then(
+                function(){
+                    console.log('resolved: sdk.is_authenticated',sdk.is_authenticated)
+                    // login success, this is called 
+                    $('#login-btn').hide()
+                    $('#logout-btn').show()
+                    //location.href = 'playground.html'
+                },
+                function(){
+                    // login failure , this is called 
+                    console.log('rejected: sdk.is_authenticated',sdk.is_authenticated)
+                    $('#login-btn').show()
+                    $('#logout-btn').hide()
+                }
+            )
+        }
+        else if (0){
+            /* sample code for login and connect */
+            sdk.login(username,password).then(
+                function(){
+                    console.log('resolved: sdk.is_authenticated',sdk.is_authenticated)
+                    // login success, this is called 
+                    $('#login-btn').hide()
+                    $('#logout-btn').show()
+                    //location.href = 'playground.html'
+                
+                    sdk.connect().progress(function(state){
+                            console.log(state)
+                            $('.connection-state').html(state)
+                            switch (state){
+                                case 'onopen':
+                                    break
+                                case 'onclose':
+                                    break
+                            }
+                        }
+                    )
+                },
+                function(){
+                    // login failure , this is called 
+                    console.log('rejected: sdk.is_authenticated',sdk.is_authenticated)
+                    $('#login-btn').show()
+                    $('#logout-btn').hide()
+                }
+            )
+        }
+        else if (1){
+            /* sample code for login, connect and re-login,re-connect */
+            sdk.login(username,password).then(
+                function(){
+                    console.log('resolved: sdk.is_authenticated',sdk.is_authenticated)
+                    // login success, this is called 
+                    $('#login-btn').hide()
+                    $('#logout-btn').show()
+                    //location.href = 'playground.html'
+                
+                    sdk.connect().progress(function(state){
+                            console.log(state)
+                            $('.connection-state').html(state)
+                            switch (state){
+                                case 'onopen':
+                                    break
+                                case 'onclose':
+                                    if (sdk.is_authenticated){
+                                        setTimeout(function(){window.login()},1000)
+                                    }
+                                    else{
+                                        console.log('user logout')
+                                        $('#login-btn').show()
+                                        $('#logout-btn').hide()                                        
+                                    }
+                                    break
+                            }
+                        }
+                    )
+                },
+                function(code, reason){
+                    // login failure , this is called 
+                    console.log('rejected, code',code,', reason',reason,', sdk.is_authenticated',sdk.is_authenticated)
+                    if (code == 0){
+                        setTimeout(function(){window.login()},1000)
+                    }
+                    else{
+                        $('#login-btn').show()
+                        $('#logout-btn').hide()
+                    }
+                }
+            )
+        }
+    }
+    
+    var is_secure = window.location.protocol == 'https'
+    var host_port = window.location.host.split(':')
+    var port = (host_port.length==2) ? parseInt(host_port[1]) : (is_secure ? 443 : 80)
+    $('input[name="port"]').val(port)
+    var ws_port = port += 1
+    $('input[name="ws_port"]').val(ws_port)
+
+    $('#login-btn').click(function(){
+        var options = {
+            host:$('input[name="host"]').val().trim() || window.location.hostname,
+            port:$('input[name="port"]').val().trim(),
+            ws_port: $('input[name="ws_port"]').val().trim()
+        }
+        sdk.set_options(options)
+        window.login($('input[name="username"]').val(),$('input[name="password"]').val())
+    })
+    
+    $('#logout-btn').click(function(){
+        sdk.logout().done(function(){
+            $('#login-btn').show()
+            $('#logout-btn').hide()
+        })
+    })
+
+    window.login()
+    
+    /*
+    if ($('input[name="host"]').val().trim()==window.location.hostname){
+        window.login()
+    }
+    else{
+        $('#login-btn').click()
+    }
+    */
+
+})
+</script>
+</body>
+</html>
